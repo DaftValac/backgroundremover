@@ -300,7 +300,7 @@ def transparentgif(output, file_path,
               framerate)
     cmd = [
         'ffmpeg', '-y', '-i', file_path, '-i', temp_file, '-filter_complex',
-        '[1][0]scale2ref[mask][main];[main][mask]alphamerge,fps=10,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+        '[0:v]split[main][ref];[1][ref]scale=rw:rh[mask];[main][mask]alphamerge,fps=10,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
         '-shortest', output
     ]
 
@@ -331,7 +331,7 @@ def transparentgifwithbackground(output, overlay, file_path,
     print("Starting alphamerge")
     cmd = [
         'ffmpeg', '-y', '-i', file_path, '-i', temp_file, '-i', overlay, '-filter_complex',
-        '[1][0]scale2ref[mask][main];[main][mask]alphamerge[fg];[2][fg]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2:format=auto,fps=10,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+        '[0:v]split[main][ref];[1][ref]scale=rw:rh[mask];[main][mask]alphamerge[fg];[2][fg]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2:format=auto,fps=10,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
         '-shortest', output
     ]
     sp.run(cmd)
@@ -366,7 +366,7 @@ def transparentvideo(output, file_path,
     encoding_args = _alpha_encoding_args(output, alpha_codec, alpha_pix_fmt)
     cmd = [
         'ffmpeg', '-y', '-i', file_path, '-i', temp_file, '-filter_complex',
-        '[1][0]scale2ref[mask][main];[main][mask]alphamerge[v]',
+        '[0:v]split[main][ref];[1][ref]scale=rw:rh[mask];[main][mask]alphamerge[v]',
         '-map', '[v]', '-map', '0:a?', '-shortest'
     ]
     cmd += encoding_args + [output]
@@ -403,7 +403,7 @@ def transparentvideoovervideo(output, overlay, file_path,
     encoding_args = _alpha_encoding_args(output, alpha_codec, alpha_pix_fmt)
     cmd = [
         'ffmpeg', '-y', '-i', file_path, '-i', temp_file, '-i', overlay, '-filter_complex',
-        '[1][0]scale2ref[mask][main];[main][mask]alphamerge[vid];[vid][2:v]scale2ref[fg][bg];[bg][fg]overlay[out]',
+        '[0:v]split[main][ref];[1][ref]scale=rw:rh[mask];[main][mask]alphamerge[vid];[2:v]split[bg][ref2];[vid][ref2]scale=rw:rh[fg];[bg][fg]overlay[out]',
         '-map', '[out]', '-map', '2:a?', '-shortest'
     ]
     cmd += encoding_args + [output]
@@ -439,14 +439,18 @@ def transparentvideooverimage(output, overlay, file_path,
     temp_image = os.path.abspath("%s/new.jpg" % tmpdirname)
     cmd = [
         'ffmpeg', '-y', '-i', overlay, '-i', file_path, '-filter_complex',
-        'scale2ref[img][vid];[img]setsar=1;[vid]nullsink', '-q:v', '2', temp_image
+        '[0][1]scale=rw:rh[img];[img]setsar=1', '-q:v', '2',
+        # scale repeats the single image frame while the reference video
+        # plays out; keep only the first frame
+        '-frames:v', '1', temp_image
     ]
     sp.run(cmd)
     print("Starting alphamerge")
     encoding_args = _alpha_encoding_args(output, alpha_codec, alpha_pix_fmt)
     cmd = [
-        'ffmpeg', '-y', '-i', temp_image, '-i', file_path, '-i', temp_file, '-filter_complex',
-        '[2][1]scale2ref[mask][main];[main][mask]alphamerge[fg];[0:v]scale2ref[bg][fg];[bg][fg]overlay=(W-w)/2:(H-h)/2:shortest=1[out]',
+        # -loop 1 so the single-frame background image lasts the whole video
+        'ffmpeg', '-y', '-loop', '1', '-i', temp_image, '-i', file_path, '-i', temp_file, '-filter_complex',
+        '[1]split[main][ref];[2][ref]scale=rw:rh[mask];[main][mask]alphamerge[fg];[fg]split[fg1][fg2];[0:v][fg2]scale=rw:rh[bg];[bg][fg1]overlay=(W-w)/2:(H-h)/2:shortest=1[out]',
         '-map', '[out]', '-map', '1:a?', '-shortest'
     ]
     cmd += encoding_args + [output]
