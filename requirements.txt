@@ -5,7 +5,6 @@ idna
 PySocks
 six
 urllib3
-scikit-image
 torch>=1.13.0
 torchvision>=0.14.0
 waitress
@@ -21,6 +20,7 @@ Pillow
 pillow-heif
 ffmpeg-python
 flask
+scikit-image==0.25.1
 numpy==1.26.4
 # llvmlite~=0.48.0
 # pywavelets~=1.9.0
