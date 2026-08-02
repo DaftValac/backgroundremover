@@ -24,7 +24,7 @@ setup(
     ],
     keywords="remove, background, u2net, remove background, background remover",
     packages=find_packages(),
-    python_requires=">=3.6, <4",
+    python_requires=">=3.9, <4",
     install_requires=requireds,
     entry_points={
         "console_scripts": [
