@@ -22,6 +22,6 @@ pillow-heif
 ffmpeg-python
 flask
 llvmlite~=0.48.0
-numpy~=2.4.0
+numpy==1.26.4
 pywavelets~=1.9.0
 numba~=0.66.0
